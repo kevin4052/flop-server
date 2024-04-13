@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"sync"
@@ -17,12 +19,41 @@ var upgrader = websocket.Upgrader{
 type Manager struct {
 	clients ClientList
 	sync.RWMutex
+
+	handlers map[string]EventHandler
 }
 
 func NewManager() *Manager {
-	return &Manager{
-		clients: make(ClientList),
+	m := &Manager{
+		clients:  make(ClientList),
+		handlers: make(map[string]EventHandler),
 	}
+
+	m.setupEventHandlers()
+	return m
+}
+
+func (m *Manager) setupEventHandlers() {
+	m.handlers[EventSendMessage] = sendMessage
+}
+
+func sendMessage(event Event, c *Client) error {
+	fmt.Println(event)
+	return nil
+}
+
+func (m *Manager) routeEvent(event Event, c *Client) error {
+	handler, ok := m.handlers[event.Type]
+
+	if !ok {
+		return errors.New("unsupported event type")
+	}
+
+	if err := handler(event, c); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (m *Manager) serveWS(c *gin.Context) {
@@ -43,7 +74,7 @@ func (m *Manager) serveWS(c *gin.Context) {
 	m.addClient(client)
 
 	go client.readMessages()
-	// go client.writeMessages()
+	go client.writeMessages()
 }
 
 func (m *Manager) addClient(client *Client) {
