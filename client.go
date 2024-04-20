@@ -71,11 +71,11 @@ func (c *Client) readMessages() {
 }
 
 func (c *Client) writeMessages() {
+	ticker := time.NewTicker(pingInterval)
 	defer func() {
+		ticker.Stop()
 		c.manager.removeClient(c)
 	}()
-
-	ticker := time.NewTicker(pingInterval)
 
 	for {
 		select {

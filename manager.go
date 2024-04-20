@@ -12,8 +12,20 @@ import (
 )
 
 var upgrader = websocket.Upgrader{
+	CheckOrigin:     checkOrigin,
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
+}
+
+func checkOrigin(r *http.Request) bool {
+	origin := r.Header.Get("Origin")
+
+	switch origin {
+	case "http://localhost:3000":
+		return true
+	default:
+		return false
+	}
 }
 
 type Manager struct {
@@ -60,9 +72,9 @@ func (m *Manager) serveWS(c *gin.Context) {
 	log.Println("new connection")
 
 	// todo: add correct origin
-	upgrader.CheckOrigin = func(r *http.Request) bool {
-		return true
-	}
+	// upgrader.CheckOrigin = func(r *http.Request) bool {
+	// 	return true
+	// }
 
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
