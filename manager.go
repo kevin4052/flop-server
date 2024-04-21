@@ -1,11 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -46,11 +48,37 @@ func NewManager() *Manager {
 }
 
 func (m *Manager) setupEventHandlers() {
-	m.handlers[EventSendMessage] = sendMessage
+	m.handlers[EventSendMessage] = sendMessageHandler
 }
 
-func sendMessage(event Event, c *Client) error {
-	fmt.Println(event.Type, string(event.Payload))
+func sendMessageHandler(event Event, c *Client) error {
+	var chatEvent SendMessageEvent
+
+	fmt.Println("send message event payload-> ", string(event.Payload))
+
+	if err := json.Unmarshal(event.Payload, &chatEvent); err != nil {
+		return fmt.Errorf("bad payload in request: %v", err)
+	}
+
+	var broadCastMessage NewMessageEvent
+	broadCastMessage.Sent = time.Now()
+	broadCastMessage.Message = chatEvent.Message
+	broadCastMessage.From = chatEvent.From
+
+	data, err := json.Marshal(broadCastMessage)
+	if err != nil {
+		return fmt.Errorf("failed to marshal broadcast message: %v", err)
+	}
+
+	outGoingMessage := Event{
+		Payload: data,
+		Type:    EventNewMessage,
+	}
+
+	for client := range c.manager.clients {
+		client.egress <- outGoingMessage
+	}
+
 	return nil
 }
 
@@ -70,11 +98,6 @@ func (m *Manager) routeEvent(event Event, c *Client) error {
 
 func (m *Manager) serveWS(c *gin.Context) {
 	log.Println("new connection")
-
-	// todo: add correct origin
-	// upgrader.CheckOrigin = func(r *http.Request) bool {
-	// 	return true
-	// }
 
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {

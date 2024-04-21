@@ -18,7 +18,6 @@ type ClientList map[*Client]bool
 type Client struct {
 	connection *websocket.Conn
 	manager    *Manager
-
 	// avoiding concurrent writes from a single websocket connection
 	egress chan Event
 }
