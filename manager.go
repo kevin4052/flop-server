@@ -60,7 +60,7 @@ func sendMessageHandler(event Event, c *Client) error {
 		return fmt.Errorf("bad payload in request: %v", err)
 	}
 
-	var broadCastMessage NewMessageEvent
+	var broadCastMessage BroadcastMessageEvent
 	broadCastMessage.Sent = time.Now()
 	broadCastMessage.Message = chatEvent.Message
 	broadCastMessage.From = chatEvent.From
@@ -75,6 +75,7 @@ func sendMessageHandler(event Event, c *Client) error {
 		Type:    EventNewMessage,
 	}
 
+	// broadcast to all clients
 	for client := range c.manager.clients {
 		client.egress <- outGoingMessage
 	}

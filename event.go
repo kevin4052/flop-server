@@ -22,7 +22,7 @@ type SendMessageEvent struct {
 	From    string `json:"from"`
 }
 
-type NewMessageEvent struct {
+type BroadcastMessageEvent struct {
 	SendMessageEvent
 	Sent time.Time `json:"sentDate"`
 }
